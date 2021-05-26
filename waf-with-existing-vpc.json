@@ -1,0 +1,290 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Barracuda WAF PAYG or BYOL 1 instance, 1 interface ( aka WAF on a stick ) plus back-end webserver with OWASP Juice Shop in Docker, existing VPC. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the resources used if you create a stack from this template! The initial password is admin/instanceid.  The WAF will have 1 interface with a public ip which is used for both management and ingress/egress traffic.  Check the outputs at the end of stack creation for the public IP and DNS name.  A security group will be created allowing inbound for 8000, 8443, 80, and 443. Have Fun!",
+
+  "Parameters" : {
+    "VPCId": {
+      "Description": "Select the VPC for this deployment",
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "SubnetId": {
+      "Description": "The Id of the subnet in which the WAF is deployed",
+      "Type": "AWS::EC2::Subnet::Id"
+    },	
+    "InstanceType" : {
+      "Description" : "EC2 instance type",
+      "Type" : "String",
+      "Default" : "m4.large",
+      "AllowedValues" : [ "m3.medium", "m4.large" ]
+    },
+    "AllowedSourceIP" : {
+      "Description" : "The IP address range that can access to the EC2 instance.",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Must be a valid IP CIDR range of the form x.x.x.x/x."
+     },
+     "LicenseType" : {
+       "Description": "Select BYOL or PAYG. For BYOL, visit https://www.barracuda.com/download/products/web-application-firewall to request a free 30-day eval license.",
+       "Type": "String",
+       "Default": "PAYG",
+       "AllowedValues": ["BYOL", "PAYG"]
+     },
+     "KeyName" : {
+      "Description": "Enter the key pair name for the web server instance",
+      "Type": "String",
+      "Default": "Your Key Pair Name Here"
+    }
+  },
+
+
+
+  "Metadata" : {
+    "AWS::CloudFormation::Interface" : {
+      "ParameterGroups" : [
+	      {"Label" : {"default": "Networking"}, "Parameters" : ["VPCId", "SubnetId"] },
+	      {"Label" : {"default": "Instance configuration"}, "Parameters" : ["InstanceType"]  },
+	      {"Label" : {"default": "Security configuration"}, "Parameters" : ["AllowedSourceIP"] },
+          {"Label" : {"default": "License"}, "Parameters" : ["LicenseType"] },
+          {"Label" : {"default": "Key Pair Name"}, "Parameters" : ["KeyName"] }
+	    ],
+      "ParameterLabels" : {
+		"VPCId": {"default": "VPC Id:"},
+		"SubnetId": {"default": "Subnet Id:"},
+        "InstanceType": {"default": "WAF Instance Type:"},
+        "AllowedSourceIP": {"default": "WAF Admin Access CIDR range:"},
+        "LicenseType": {"default": "WAF License Type:"},
+        "KeyName": {"default":"Key Pair Name:"}
+      }
+    }
+  },
+
+
+
+
+  "Mappings" : {
+    "AmiMap" : {
+      "us-east-1": { "ImageID": "ami-0d5eff06f840b45e9" },
+      "us-east-2": { "ImageID": "ami-077e31c4939f6a2f3" },
+      "us-west-1": { "ImageID": "ami-04468e03c37242e1e" },
+      "us-west-2": { "ImageID": "ami-0cf6f5c8a62fa5da6" }
+    },
+    "RegionMap" : {
+      "us-east-1": { "MapName": "useast1map" },
+      "us-east-2": { "MapName": "useast2map" },
+      "us-west-1": { "MapName": "uswest1map" },
+      "us-west-2": { "MapName": "uswest2map" }
+    },
+    "useast1map" : {
+      "BYOL" : { "ImageID": "ami-034543d76ef7650a8" },
+      "PAYG" : { "ImageID": "ami-02ba799fdb5fda694" }
+    },
+    "useast2map" : {
+      "BYOL" : { "ImageID" : "ami-0225a73ef8088e3ee" },
+      "PAYG" : { "ImageID" : "ami-063bad96bd053da6e" }
+    },
+    "uswest1map" : {
+      "BYOL" : { "ImageID" : "ami-05a27e61529c3671a" },
+      "PAYG" : { "ImageID" : "ami-0a9b9407fc6bb2a73" }
+    },
+    "uswest2map" : {
+      "BYOL" : { "ImageID" : "ami-00940bc5f7caf92b8" },
+      "PAYG" : { "ImageID" : "ami-07a03990a907dea03" }
+    }    
+  },
+
+
+
+  "Resources" : {
+    "WAF" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "InstanceType" : { "Ref" : "InstanceType" },
+        "Tags" : [ {
+          "Key": "Name",  
+          "Value": "Barracuda WAF"
+          } ],
+  		  "NetworkInterfaces": [ { 
+	  		"DeviceIndex": "0", 
+		  	"AssociatePublicIpAddress": true, 
+			  "SubnetId": { "Ref": "SubnetId" }, 
+			  "GroupSet": [{ "Fn::GetAtt" : ["BWAFsecRuleGroup", "GroupId"] }]
+			  } ],
+        "ImageId" : { 
+          "Fn::FindInMap" : [ {
+            "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "MapName" ] },
+            { "Ref" : "LicenseType" },
+            "ImageID" 
+          ] 
+        }
+     }
+    },
+
+    "WebServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "KeyName": { "Ref": "KeyName" },
+        "Tags" : [ {
+          "Key": "Name", 
+          "Value": "Web Server (Juice Shop)"
+          } ],
+        "InstanceType" : "t2.micro",
+  		  "NetworkInterfaces": [ { 
+	  		"DeviceIndex": "0", 
+		  	"AssociatePublicIpAddress": true, 
+			  "SubnetId": { "Ref": "SubnetId" }, 
+			  "GroupSet": [{ "Fn::GetAtt" : ["WebServerRuleGroup", "GroupId"] }]
+			} ],
+        "ImageId" : { "Fn::FindInMap" : [ "AmiMap", { "Ref" : "AWS::Region" }, "ImageID" ] },
+        "UserData": {
+          "Fn::Base64": {
+              "Fn::Join": [
+                  "\n",
+                  [
+                    "#!/bin/bash",
+                    "yum update -y 2>&1 >> /var/log/install.log",
+                    "yum upgrade -y 2>&1 >> /var/log/install.log",
+                    "yum install docker -y 2>&1 >> /var/log/install.log",
+                    "systemctl enable docker 2>&1 >> /var/log/install.log",
+                    "systemctl start docker 2>&1 >> /var/log/install.log",
+                    "echo 'Before docker run...' >> /var/log/install.log",
+                    "docker run -d --restart unless-stopped -p 8000:3000 bkimminich/juice-shop 2>&1 >> /var/log/install.log",
+                    "echo 'After docker run...' >> /var/log/install.log",
+                    "/opt/aws/bin/cfn-signal -e $? ",
+                    "         --stack ",
+                    {
+                        "Ref": "AWS::StackName"
+                    },
+                    "         --resource WebServer ",
+                    "         --region ",
+                    {
+                        "Ref": "AWS::Region"
+                    }
+                ]
+             ]
+          }
+        }
+      }
+    },
+
+    "WebServerRuleGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security rule group for the test web server",
+        "VpcId": {
+          "Ref": "VPCId"
+        }
+      }
+    },
+    "WebServerRule1": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WebServerRuleGroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "8000",
+        "ToPort": "8009",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "WebServerRule2": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WebServerRuleGroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "22",
+        "ToPort": "22",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+
+   "BWAFsecRuleGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security rule group for the Barracuda WAF",
+        "VpcId": {
+          "Ref": "VPCId"
+        }
+      }
+    },
+    "BWAFSecurityGroupRule1": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BWAFsecRuleGroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "8000",
+        "ToPort": "8000",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "BWAFSecurityGroupRule2": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BWAFsecRuleGroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "8443",
+        "ToPort": "8443",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "BWAFSecurityGroupRule3": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BWAFsecRuleGroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "80",
+        "ToPort": "80",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "BWAFSecurityGroupRule4": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BWAFsecRuleGroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "443",
+        "ToPort": "443",
+        "CidrIp": "0.0.0.0/0"
+      }
+    }
+ },
+
+
+
+  "Outputs" : {
+    "PublicDNSName" : {
+      "Description" : "Public DNS name of the new WAF instance",
+      "Value" : { "Fn::GetAtt" : [ "WAF", "PublicDnsName" ] }
+    },
+    "PublicIPAddress" : {
+        "Description" : "Public IP address of the new WAF instance",
+        "Value" : { "Fn::GetAtt" : [ "WAF", "PublicIp" ] }
+      },
+    "WAFInstanceID" : {
+        "Description" : "Instance ID of the new WAF (admin password)",
+        "Value" : { "Ref" : "WAF" }
+      },
+    "WebServerIPAddr" : {
+      "Description" : "Public IP address of the test web server",
+      "Value" : { "Fn::GetAtt" : [ "WebServer", "PublicIp" ] }
+    },
+    "WebServerPrivateIP" : {
+        "Description" : "Private IP address of the test web server",
+        "Value" : { "Fn::GetAtt" : [ "WebServer", "PrivateIp" ] }
+    }
+  }
+}
