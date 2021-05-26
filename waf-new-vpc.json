@@ -1,0 +1,485 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Date: 5/25/21 Author: Brett Wolmarans bwolmarans@barracuda.com with Michael Collins (mcollins@barracuda.com) Barracuda WAF PAYG 1 instance, new VPC, 1 interface ( aka WAF on a stick ) plus back-end webserver with OWASP Juice Shop in Docker. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the resources used if you create a stack from this template! The initial password is admin/<instanceid>.  The WAF will have 1 interface with a public ip which is used for both management and ingress/egress traffic.  Check the outputs at the end of stack creation for the public IP and DNS name.  A security group for the WAF will be created allowing inbound for 8000, 8443, 80, and 443, and 8080. A security group for the webserver will be created with inbound for ports 8000-8009 and 22 for management.",
+	
+
+	
+	"Parameters": {
+	   "EnvironmentName": {
+         "Description": "An environment name that is prefixed to resource names",
+		 "Default": "BWAF",
+         "Type": "String"
+		},
+		"InstanceType": {
+			"Description": "EC2 instance type",
+			"Type": "String",
+			"Default": "m4.large",
+			"AllowedValues": [
+				"m3.medium",
+				"m4.large"
+			]
+		},
+		"LicenseType": {
+			"AllowedValues": [
+				"PAYG",
+				"BYOL"
+			],
+			"Default": "PAYG",
+			"Description": "Select BYOL or PAYG. For BYOL, visit https://www.barracuda.com/download/products/web-application-firewall to request a free 30-day eval license.",
+			"Type": "String"
+		},		
+		"secGroupSrcCIDR": {
+			"Description": "Src IP CIDR for inbound security group for ports 8000/8443/80/443/8080",
+			"Type": "String",
+			"MinLength": "9",
+			"MaxLength": "18",
+			"Default": "0.0.0.0/0",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription": "Must be a valid IP CIDR range of the form x.x.x.x/x."
+		},
+		"VpcCIDR": {
+			"Description": "Subnet for the new VPC ( *** must not conflict with existing subnets *** ) ",
+			"Type": "String",
+			"Default": "10.0.0.0/16",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription": "Use valid CIDR notation"
+		},
+		"subNetCIDR": {
+			"Description": "Private subnet within the VPC address space. ",
+			"Type": "String",
+			"Default": "10.0.1.0/24",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+		},
+        "KeyName" : {
+            "Description": "Enter the key pair name for the web server instance",
+            "Type": "String",
+            "Default": "Your Key Pair Name Here"
+       }
+	},
+
+    "Metadata" : {
+        "AWS::CloudFormation::Interface" : {
+          "ParameterGroups" : [
+              {"Label" : {"default": "Networking"}, "Parameters" : [
+                  "VpcCIDR",
+                  "subNetCIDR"
+                  ] },
+              {"Label" : {"default": "Instance configuration"}, "Parameters" : ["InstanceType"]  },
+              {"Label" : {"default": "Security configuration"}, "Parameters" : ["secGroupSrcCIDR"] },
+              {"Label" : {"default": "License"}, "Parameters" : ["LicenseType"] },
+              {"Label" : {"default": "Key Pair Name"}, "Parameters" : ["KeyName"] }
+            ],
+          "ParameterLabels" : {
+            "VpcCIDR": {"default": "VPC CIDR:"},
+            "subNetCIDR": {"default": "Subnet CIDR:"},
+            "InstanceType": {"default": "WAF Instance Type:"},
+            "AllowedSourceIP": {"default": "WAF Admin Access CIDR range:"},
+            "LicenseType": {"default": "WAF License Type:"},
+            "KeyName": {"default":"Key Pair Name:"}
+          }
+        }
+      },
+    
+
+		
+	"Conditions": {
+        "useBYOL": {
+            "Fn::Equals": [
+                {
+                    "Ref": "LicenseType"
+                },
+                "BYOL"
+            ]
+        }
+    },
+	
+	
+	
+	"Mappings": {
+        "AmiMap" : {
+            "us-east-1": { "ImageID": "ami-0d5eff06f840b45e9" },
+            "us-east-2": { "ImageID": "ami-077e31c4939f6a2f3" },
+            "us-west-1": { "ImageID": "ami-04468e03c37242e1e" },
+            "us-west-2": { "ImageID": "ami-0cf6f5c8a62fa5da6" }
+          },      
+		"PAYGRegionMap": {
+			"us-east-1": {				"ImageID": "ami-02ba799fdb5fda694"			},
+			"eu-north-1": {				"ImageID": "ami-0d743518c57557a7f"			},
+			"ap-south-1": {				"ImageID": "ami-049ddfff171e18266"			},
+			"eu-west-3": {				"ImageID": "ami-0596e2065cd63c027"			},
+			"eu-west-2": {				"ImageID": "ami-024254e7df69f666c"			},
+			"eu-west-1": {				"ImageID": "ami-0c2ee20b4d2005675"			},
+			"ap-northeast-2": {			"ImageID": "ami-0afbe401dbdb9a282"			},
+			"ap-northeast-1": {			"ImageID": "ami-0843e2a08adf5a2bb"			},
+			"sa-east-1": {				"ImageID": "ami-05b3d0dfa89c7dec6"			},
+			"ca-central-1": {			"ImageID": "ami-01cba513c0e5efe2b"			},
+			"ap-southeast-1": {			"ImageID": "ami-0e746d3a5b665a6fb"			},
+			"ap-southeast-2": {			"ImageID": "ami-00ae25082320f2b00"			},
+			"eu-central-1": {			"ImageID": "ami-0dcdd8046df8e35bf"			},
+			"us-east-2": {				"ImageID": "ami-063bad96bd053da6e"			},
+			"us-west-1": {				"ImageID": "ami-0a9b9407fc6bb2a73"			},
+			"us-west-2": {				"ImageID": "ami-07a03990a907dea03"			}
+		},
+		"BYOLRegionMap": {
+			"us-east-1": {				"ImageID": "ami-034543d76ef7650a8"			},
+			"eu-north-1": {				"ImageID": "ami-0ae80231e0a70f4b9"			},
+			"ap-south-1": {				"ImageID": "ami-09fb42d83e8bb92b5"			},
+			"eu-west-3": {				"ImageID": "ami-0944be87ea4cbcd2d"			},
+			"eu-west-2": {				"ImageID": "ami-01e69c4baf54bc744"			},
+			"eu-west-1": {				"ImageID": "ami-08646fe841b64d6ce"			},
+			"ap-northeast-2": {			"ImageID": "ami-00e2b2ae61dce213f"			},
+			"ap-northeast-1": {			"ImageID": "ami-0077e528ae43498f5"   		},
+			"sa-east-1": {				"ImageID": "ami-08604eae176b674f3"			},
+			"ca-central-1": {			"ImageID": "ami-017cb89c18dc19aab"			},
+			"ap-southeast-1": {			"ImageID": "ami-07937237ea147620a"			},
+			"ap-southeast-2": {			"ImageID": "ami-08ab64d96c4c3d97d"			},
+			"eu-central-1": {			"ImageID": "ami-081825f8e52130748"			},
+			"us-east-2": {				"ImageID": "ami-0225a73ef8088e3ee"			},
+			"us-west-1": {				"ImageID": "ami-05a27e61529c3671a"			},
+			"us-west-2": {				"ImageID": "ami-00940bc5f7caf92b8"			}
+		}		
+	},
+	
+	
+	
+	
+	
+	"Resources": {
+		"myVPC": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": {
+					"Ref": "VpcCIDR"
+				},
+				"EnableDnsSupport": "true",
+				"EnableDnsHostnames": "true",
+				"Tags": [
+				{
+                  "Key": "Name",
+                  "Value": { "Ref": "EnvironmentName" }
+				   }
+				]
+			}
+		},
+		"mySubnet": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "myVPC"
+				},
+				"CidrBlock": {
+					"Ref": "subNetCIDR"
+				},
+				"Tags": [
+				{
+                  "Key": "Name",
+                  "Value": { "Ref": "EnvironmentName" }
+				   }
+				]
+			}
+		},
+		"myRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "myVPC"
+				},
+				"Tags": [
+				{
+                  "Key": "Name",
+                  "Value": { "Ref": "EnvironmentName" }
+				   }
+				]
+			}
+		},
+		"myInternetGateway": {
+			"Type": "AWS::EC2::InternetGateway",
+			"Properties": {
+				"Tags": [
+				{
+                  "Key": "Name",
+                  "Value": { "Ref": "EnvironmentName" }
+				   }
+				]
+			}
+		},
+		"InternetGatewayAttachment": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"DependsOn" : "myInternetGateway",
+			"Properties": {
+				"VpcId": {
+					"Ref": "myVPC"
+				},
+				"InternetGatewayId": {
+					"Ref": "myInternetGateway"
+				}
+			}
+		},
+		"myRoute" : {
+		   "Type" : "AWS::EC2::Route",
+		   "DependsOn" : "InternetGatewayAttachment",
+		   "Properties" : {
+			  "RouteTableId" : { "Ref" : "myRouteTable" },
+			  "DestinationCidrBlock" : "0.0.0.0/0",
+			  "GatewayId" : { "Ref" : "myInternetGateway" }
+		   }
+		},
+		"mySubnetRouteTableAssociation": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "mySubnet"
+				},
+				"RouteTableId": {
+					"Ref": "myRouteTable"
+				}
+			}
+		},
+		
+		
+		"WAF": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"InstanceType": {
+					"Ref": "InstanceType"
+				},
+				"NetworkInterfaces": [
+					{
+						"DeviceIndex": "0",
+						"AssociatePublicIpAddress": true,
+						"SubnetId": {
+							"Ref": "mySubnet"
+						},
+						"GroupSet": [
+							{
+								"Fn::GetAtt": [
+									"BWAFsecGroup",
+									"GroupId"
+								]
+							}
+						]
+					}
+				],
+				"ImageId": {
+					"Fn::If" : [
+						"useBYOL",
+						{"Fn::FindInMap": [ "BYOLRegionMap",  { "Ref": "AWS::Region" }, "ImageID" ] },
+						{"Fn::FindInMap": [ "PAYGRegionMap",  { "Ref": "AWS::Region" }, "ImageID" ]	}
+					]
+				},
+				"Tags": [
+				{
+                  "Key": "Name",
+                  "Value": { "Ref": "EnvironmentName" }
+				   }
+				]				
+			}
+		},
+	
+
+        "WebServer" : {
+            "Type" : "AWS::EC2::Instance",
+            "Properties" : {
+              "KeyName": { "Ref": "KeyName" },
+              "Tags" : [ {
+                  "Key": "Name", 
+                  "Value": "Web Server (Juice Shop)"
+                } ],
+              "InstanceType" : "t2.micro",
+                  "NetworkInterfaces": [ { 
+                     "DeviceIndex": "0", 
+                     "AssociatePublicIpAddress": true, 
+                     "SubnetId": { "Ref": "mySubnet" }, 
+                     "GroupSet": [{ "Fn::GetAtt" : ["WebServerRuleGroup", "GroupId"] }]
+                  } ],
+              "ImageId" : { "Fn::FindInMap" : [ "AmiMap", { "Ref" : "AWS::Region" }, "ImageID" ] },
+              "UserData": {
+                "Fn::Base64": {
+                    "Fn::Join": [
+                        "\n",
+                        [
+                          "#!/bin/bash",
+                          "yum update -y 2>&1 >> /var/log/install.log",
+                          "yum upgrade -y 2>&1 >> /var/log/install.log",
+                          "yum install docker -y 2>&1 >> /var/log/install.log",
+                          "systemctl enable docker 2>&1 >> /var/log/install.log",
+                          "systemctl start docker 2>&1 >> /var/log/install.log",
+                          "echo 'Before docker run...' >> /var/log/install.log",
+                          "docker run -d --restart unless-stopped -p 8000:3000 bkimminich/juice-shop 2>&1 >> /var/log/install.log",
+                          "echo 'After docker run...' >> /var/log/install.log",
+                          "/opt/aws/bin/cfn-signal -e $? ",
+                          "         --stack ",
+                          {
+                              "Ref": "AWS::StackName"
+                          },
+                          "         --resource WebServer ",
+                          "         --region ",
+                          {
+                              "Ref": "AWS::Region"
+                          }
+                      ]
+                   ]
+                }
+              }
+            }
+          },
+      
+
+
+        "WebServerRuleGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+              "GroupDescription": "Security rule group for the test web server",
+              "VpcId": {
+                "Ref": "myVPC"
+              },
+              "Tags": [
+                {
+                  "Key": "Name",
+                  "Value": { "Ref": "EnvironmentName" }
+                 }
+              ]
+            }
+          },
+        "WebServerRule1": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+              "GroupId": {
+                "Ref": "WebServerRuleGroup"
+              },
+              "IpProtocol": "tcp",
+              "FromPort": "8000",
+              "ToPort": "8009",
+              "CidrIp": "0.0.0.0/0"
+            }
+          },
+        "WebServerRule2": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+              "GroupId": {
+                "Ref": "WebServerRuleGroup"
+              },
+              "IpProtocol": "tcp",
+              "FromPort": "22",
+              "ToPort": "22",
+              "CidrIp": "0.0.0.0/0"
+            }
+          },
+      
+
+
+
+		"BWAFsecGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "Security rule group for the Barracuda WAF",
+				"VpcId": {
+					"Ref": "myVPC"
+				},
+				"Tags": [
+				{
+                  "Key": "Name",
+                  "Value": { "Ref": "EnvironmentName" }
+				   }
+				]				
+			}
+		},
+		"BWAFsecRule1": {
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties": {
+				"GroupId": {
+					"Ref": "BWAFsecGroup"
+				},
+				"IpProtocol": "tcp",
+				"FromPort": "8000",
+				"ToPort": "8000",
+				"CidrIp": {
+					"Ref": "secGroupSrcCIDR"
+				}
+			}
+		},
+		"BWAFsecRule2": {
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties": {
+				"GroupId": {
+					"Ref": "BWAFsecGroup"
+				},
+				"IpProtocol": "tcp",
+				"FromPort": "8443",
+				"ToPort": "8443",
+				"CidrIp": {
+					"Ref": "secGroupSrcCIDR"
+				}
+			}
+		},
+		"BWAFsecRule3": {
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties": {
+				"GroupId": {
+					"Ref": "BWAFsecGroup"
+				},
+				"IpProtocol": "tcp",
+				"FromPort": "80",
+				"ToPort": "80",
+				"CidrIp": {
+					"Ref": "secGroupSrcCIDR"
+				}
+			}
+		},
+		"BWAFsecRule4": {
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties": {
+				"GroupId": {
+					"Ref": "BWAFsecGroup"
+				},
+				"IpProtocol": "tcp",
+				"FromPort": "443",
+				"ToPort": "443",
+				"CidrIp": {
+					"Ref": "secGroupSrcCIDR"
+				}
+			}
+		},
+		"BWAFsecRule5": {
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties": {
+				"GroupId": {
+					"Ref": "BWAFsecGroup"
+				},
+				"IpProtocol": "tcp",
+				"FromPort": "8080",
+				"ToPort": "8080",
+				"CidrIp": {
+					"Ref": "secGroupSrcCIDR"
+				}
+			}
+		}
+	},
+
+
+
+
+
+	"Outputs": {
+		"PublicDNSName": {
+			"Description": "Public DNS name of the new EC2 instance",
+			"Value": { "Fn::GetAtt": [	"WAF", "PublicDnsName" ] }
+		},
+		"PublicIPAddress": {
+			"Description": "Public IP address of the new EC2 instance",
+			"Value": { "Fn::GetAtt": [ "WAF", "PublicIp" ] }
+		},
+        "WAFInstanceID" : {
+            "Description" : "Instance ID of the new WAF (admin password)",
+            "Value" : { "Ref" : "WAF" }
+          },
+        "WebServerIPAddr" : {
+          "Description" : "Public IP address of the test web server",
+          "Value" : { "Fn::GetAtt" : [ "WebServer", "PublicIp" ] }
+        },
+        "WebServerPrivateIP" : {
+            "Description" : "Private IP address of the test web server",
+            "Value" : { "Fn::GetAtt" : [ "WebServer", "PrivateIp" ] }
+        }    
+	}
+}
