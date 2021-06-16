@@ -129,7 +129,7 @@
         "KeyName": { "Ref": "KeyName" },
         "Tags" : [ {
           "Key": "Name", 
-          "Value": "Web Server (Juice Shop)"
+          "Value": "Web Server (Juice Shop/Petstore)"
           } ],
         "InstanceType" : "t2.micro",
   		  "NetworkInterfaces": [ { 

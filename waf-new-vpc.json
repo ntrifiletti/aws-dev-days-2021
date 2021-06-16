@@ -267,12 +267,10 @@
 						{"Fn::FindInMap": [ "PAYGRegionMap",  { "Ref": "AWS::Region" }, "ImageID" ]	}
 					]
 				},
-				"Tags": [
-				{
-                  "Key": "Name",
-                  "Value": { "Ref": "EnvironmentName" }
-				   }
-				]				
+				"Tags" : [ {
+					"Key": "Name",  
+					"Value": "Barracuda WAF"
+					} ]			
 			}
 		},
 	
@@ -283,7 +281,7 @@
               "KeyName": { "Ref": "KeyName" },
               "Tags" : [ {
                   "Key": "Name", 
-                  "Value": "Web Server (Juice Shop)"
+                  "Value": "Web Server (Juice Shop/Petstore)"
                 } ],
               "InstanceType" : "t2.micro",
                   "NetworkInterfaces": [ { 
