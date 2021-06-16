@@ -34,7 +34,7 @@
        "AllowedValues": ["BYOL", "PAYG"]
      },
      "KeyName" : {
-      "Description": "Enter the key pair name for the web server instance",
+      "Description": "Enter the existing key pair name for the web server instance",
       "Type": "String",
       "Default": "Your Key Pair Name Here"
     }
