@@ -278,6 +278,7 @@
 
         "WebServer" : {
             "Type" : "AWS::EC2::Instance",
+			"DependsOn" : "WAF",
             "Properties" : {
               "KeyName": { "Ref": "KeyName" },
               "Tags" : [ {
@@ -320,7 +321,7 @@
 						  "touch /tmp/withwaf.txt",
 						  "cd $dir/aws-dev-days-2021/",
 						  "pip3 install --user -r requirements.txt",
-						  "python3 waf_configuration.py",
+						  "python3 -u waf_configuration.py 2>&1 >> /var/log/install.log",
                           "/opt/aws/bin/cfn-signal -e $? ",
                           "         --stack ",
                           {
