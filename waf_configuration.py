@@ -8,6 +8,9 @@ import time
 
 waf_ip = os.environ['WAFIP']
 waf_password = os.environ['WAFPASSWORD']
+
+print("WAF IP: "+waf_ip)
+print("WAF Pass: "+waf_password)
 base_url = "http://"+waf_ip+":8000/cgi-mod/index.cgi"
 p = re.compile('name="login_page"')
 
@@ -28,6 +31,10 @@ if got_waf == 'no':
     print("FATAL: Never got the WAF admin UI...")
     exit
 
+print("Found WAF login page, sleeping 30 seconds...")
+time.sleep(30)
+print("Waking up from 30 second nap; proceeding with configuration...")
+
 headers = {"Content-Type": "application/json"}
 login_url = "http://"+waf_ip+":8000/restapi/v3.1/login"
 login_payload = {"username":"admin", "password":waf_password}
@@ -38,10 +45,11 @@ token_rstrip=token_split[1].rstrip("}")
 token=token_rstrip.replace('"','')
 auth_header=generate_header('',token)
 api_headers = {"Content-Type":"application/json", "Authorization": auth_header}
+
 #Creating the Service
 hostname = socket.gethostname()
-
 server = socket.gethostbyname(hostname)
+
 #Create certificate
 certificate_url = "http://"+waf_ip+":8000/restapi/v3.1/certificates/self-signed-certificate"
 cert_payload = {
