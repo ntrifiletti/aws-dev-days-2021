@@ -8,7 +8,7 @@ import time
 
 waf_ip = os.environ['WAFIP']
 waf_password = os.environ['WAFPASSWORD']
-base_url = ''
+base_url = "http://"+waf_ip+":8000/cgi-mod/index.cgi"
 p = re.compile('name="login_page"')
 
 ## Wait for the WAF to come up before trying to send APIs
