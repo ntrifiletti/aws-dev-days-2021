@@ -313,7 +313,7 @@
 						  "yum -y install amazon-linux-extras git python3 python2-pip",
 						  "dir=$(pwd)",
 						  "export WAFIP=10.0.1.10",
-						  {"Fn::Join": ["","export WAFPASSWORD=", { "Ref" : "WAF" } ] },
+						  {"Fn::Join": ["",["export WAFPASSWORD=", { "Ref" : "WAF" }] ] },
 						  "git clone https://github.com/mercutioviz/aws-dev-days-2021.git",
 						  "touch /tmp/withwaf.txt",
 						  "cd $dir/aws-dev-days-2021/",
