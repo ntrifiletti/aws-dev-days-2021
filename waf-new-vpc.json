@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "Date: 5/25/21 Author: Brett Wolmarans bwolmarans@barracuda.com with Michael Collins (mcollins@barracuda.com) Barracuda WAF PAYG 1 instance, new VPC, 1 interface ( aka WAF on a stick ) plus back-end webserver with OWASP Juice Shop in Docker. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the resources used if you create a stack from this template! The initial password is admin/<instanceid>.  The WAF will have 1 interface with a public ip which is used for both management and ingress/egress traffic.  Check the outputs at the end of stack creation for the public IP and DNS name.  A security group for the WAF will be created allowing inbound for 8000, 8443, 80, and 443, and 8080. A security group for the webserver will be created with inbound for ports 8000-8009 and 22 for management.",
+	"Description": "Date: 5/25/21 Author: Brett Wolmarans bwolmarans@barracuda.com with Michael Collins (mcollins@barracuda.com) Barracuda WAF PAYG 1 instance, new VPC, 1 interface ( aka WAF on a stick ) plus back-end webserver with Badstore in Docker. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the resources used if you create a stack from this template! The initial password is admin/<instanceid>.  The WAF will have 1 interface with a public ip which is used for both management and ingress/egress traffic.  Check the outputs at the end of stack creation for the public IP and DNS name.  A security group for the WAF will be created allowing inbound for 8000, 8443, 80, and 443, and 8080. A security group for the webserver will be created with inbound for ports 8000-8009 and 22 for management.",
 	
 
 	
@@ -250,6 +250,7 @@
 						"SubnetId": {
 							"Ref": "mySubnet"
 						},
+						"PrivateIpAddress": "10.0.1.10",
 						"GroupSet": [
 							{
 								"Fn::GetAtt": [
@@ -281,13 +282,14 @@
               "KeyName": { "Ref": "KeyName" },
               "Tags" : [ {
                   "Key": "Name", 
-                  "Value": "Web Server (Juice Shop/Petstore)"
+                  "Value": "Web Server (Badstore/Petstore)"
                 } ],
               "InstanceType" : "t2.micro",
                   "NetworkInterfaces": [ { 
                      "DeviceIndex": "0", 
                      "AssociatePublicIpAddress": true, 
                      "SubnetId": { "Ref": "mySubnet" }, 
+					 "PrivateIpAddress": "10.0.1.20",
                      "GroupSet": [{ "Fn::GetAtt" : ["WebServerRuleGroup", "GroupId"] }]
                   } ],
               "ImageId" : { "Fn::FindInMap" : [ "AmiMap", { "Ref" : "AWS::Region" }, "ImageID" ] },
@@ -303,7 +305,8 @@
                           "systemctl enable docker 2>&1 >> /var/log/install.log",
                           "systemctl start docker 2>&1 >> /var/log/install.log",
                           "echo 'Before docker run...' >> /var/log/install.log",
-                          "docker run -d --restart unless-stopped -p 8000:3000 bkimminich/juice-shop 2>&1 >> /var/log/install.log",
+						  "docker run -d --restart unless-stopped -p 8000:80 bwolmarans/badstore 2>&1 >> /var/log/install.log",
+                          "docker run -d --restart unless-stopped -p 8001:3000 bkimminich/juice-shop 2>&1 >> /var/log/install.log",
                           "docker run -d --restart unless-stopped -p 8080:8080 swaggerapi/petstore3 2>&1 >> /var/log/install.log",
                           "echo 'After docker run...' >> /var/log/install.log",
                           "/opt/aws/bin/cfn-signal -e $? ",
@@ -471,11 +474,11 @@
 
 	"Outputs": {
 		"PublicDNSName": {
-			"Description": "Public DNS name of the new EC2 instance",
+			"Description": "Public DNS name of the new WAF EC2 instance",
 			"Value": { "Fn::GetAtt": [	"WAF", "PublicDnsName" ] }
 		},
 		"PublicIPAddress": {
-			"Description": "Public IP address of the new EC2 instance",
+			"Description": "Public IP address of the new WAF EC2 instance",
 			"Value": { "Fn::GetAtt": [ "WAF", "PublicIp" ] }
 		},
         "WAFInstanceID" : {
