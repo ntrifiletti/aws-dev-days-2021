@@ -12,28 +12,58 @@ waf_password = os.environ['WAFPASSWORD']
 print("WAF IP: "+waf_ip)
 print("WAF Pass: "+waf_password)
 base_url = "http://"+waf_ip+":8000/cgi-mod/index.cgi"
-p = re.compile('name="login_page"')
+p = re.compile('Please wait while the system starts up')
 
 ## Wait for the WAF to come up before trying to send APIs
 got_waf = 'no'
 i = 1
+while i < 30:
+    r = requests.get(base_url)
+    m = p.search(r.text)
+    if m:
+        # still provisioning
+        print("Still provisioning, sleeping 30...")
+        time.sleep(30)
+        i = i + 1
+    else:
+        # Looks like EULA
+        break
+
+i = 1
+p = re.compile('Barracuda Product Terms')
 while i < 180:
     r = requests.get(base_url)
     m = p.search(r.text)
     if m:
+        # Still at EULA
+        time.sleep(5)
+        print("WAF Admin UI not up yet, sleeping 5 seconds...")
+        i = i + 1
+    else:
+        # Maybe have admin UI now
+        break
+
+i = 1
+p = re.compile('Please enter your administrator login and password')
+while i < 10:
+    r = requests.get(base_url)
+    m = p.search(r.text)
+    if m:
+        # Yay!
         got_waf = 'yes'
         break
-    time.sleep(5)
-    print("WAF Admin UI not up yet, sleeping 5 seconds...")
-    i = i + 1
+    else:
+        # Not yet
+        print("Still no admin UI, sleeping 10 seconds...")
+        i = i +1
 
 if got_waf == 'no':
     print("FATAL: Never got the WAF admin UI...")
     exit
 
-print("Found WAF login page, sleeping 30 seconds...")
-time.sleep(30)
-print("Waking up from 30 second nap; proceeding with configuration...")
+print("Found WAF login page, sleeping 10 seconds...")
+time.sleep(10)
+print("Waking up from 10 second nap; proceeding with configuration...")
 
 headers = {"Content-Type": "application/json"}
 login_url = "http://"+waf_ip+":8000/restapi/v3.1/login"
