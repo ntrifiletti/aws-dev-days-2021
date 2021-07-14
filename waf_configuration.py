@@ -14,7 +14,7 @@ p = re.compile('name="login_page"')
 ## Wait for the WAF to come up before trying to send APIs
 got_waf = 'no'
 i = 1
-while i < 120:
+while i < 180:
     r = requests.get(base_url)
     m = p.search(r.text)
     if m:
