@@ -3,9 +3,30 @@ import requests
 import json
 from http_basic_auth import generate_header, parse_header
 import os
+import re
+import time
 
 waf_ip = os.environ['WAFIP']
 waf_password = os.environ['WAFPASSWORD']
+base_url = ''
+p = re.compile('name="login_page"')
+
+## Wait for the WAF to come up before trying to send APIs
+got_waf = 'no'
+i = 1
+while i < 120:
+    r = requests.get(base_url)
+    m = p.search(r.text)
+    if m:
+        got_waf = 'yes'
+        break
+    time.sleep(5)
+    print("WAF Admin UI not up yet, sleeping 5 seconds...")
+    i = i + 1
+
+if got_waf == 'no':
+    print("FATAL: Never got the WAF admin UI...")
+    exit
 
 headers = {"Content-Type": "application/json"}
 login_url = "http://"+waf_ip+":8000/restapi/v3.1/login"
@@ -72,7 +93,7 @@ svc_payload = {
     "address-version": "IPv4",
     "ip-address": waf_ip,
     "name": "HTTP-API",
-    "port":80,
+    "port":8080,
     "status": "On",
     "type": "HTTP"}
 
