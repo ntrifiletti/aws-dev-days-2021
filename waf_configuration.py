@@ -5,7 +5,7 @@ from http_basic_auth import generate_header, parse_header
 import os
 import re
 import time
-from bs4 import BeautfiulSoup
+from bs4 import BeautifulSoup
 
 waf_ip = os.environ['WAFIP']
 waf_password = os.environ['WAFPASSWORD']
