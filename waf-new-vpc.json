@@ -16,7 +16,7 @@
 			"Default": "m4.large",
 			"AllowedValues": [
 				"m3.medium",
-				"m4.large"
+				"m5.large"
 			]
 		},
 		"LicenseType": {
