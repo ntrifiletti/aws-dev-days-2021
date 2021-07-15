@@ -11,14 +11,15 @@ waf_password = os.environ['WAFPASSWORD']
 
 print("WAF IP: "+waf_ip)
 print("WAF Pass: "+waf_password)
-base_url = "http://"+waf_ip+":8000/cgi-mod/index.cgi"
+base_url = "http://"+waf_ip+":8000"
+admin_url = "http://"+waf_ip+":8000/cgi-mod/index.cgi"
 p = re.compile('Please wait while the system starts up')
 
 ## Wait for the WAF to come up before trying to send APIs
 got_waf = 'no'
 i = 1
 while i < 30:
-    r = requests.get(base_url)
+    r = requests.get(admin_url)
     m = p.search(r.text)
     if m:
         # still provisioning
@@ -27,6 +28,9 @@ while i < 30:
         i = i + 1
     else:
         # Looks like EULA
+        r = requests.get(admin_url)
+        print("===========LOG==================")
+        print(r.text)
         break
 
 i = 1
@@ -46,7 +50,7 @@ while i < 180:
 i = 1
 p = re.compile('Please enter your administrator login and password')
 while i < 10:
-    r = requests.get(base_url)
+    r = requests.get(admin_url)
     m = p.search(r.text)
     if m:
         # Yay!
