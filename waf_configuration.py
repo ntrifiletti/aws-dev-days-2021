@@ -37,7 +37,7 @@ while i < 180:
     if m:
         # Still at EULA
         time.sleep(5)
-        print("WAF Admin UI not up yet, sleeping 5 seconds...")
+        print("Still at EULA, sleeping 5 seconds...")
         i = i + 1
     else:
         # Maybe have admin UI now
