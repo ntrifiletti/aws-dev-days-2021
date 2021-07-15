@@ -21,3 +21,4 @@ tornado
 urllib3==1.25.10
 waitress==1.4.4
 Werkzeug==1.0.1
+beautifulsoup4==4.9.3
