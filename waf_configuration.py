@@ -54,7 +54,7 @@ while i < 180:
                     myvalue = item.get('value')
                     myformdata[myname] = myvalue
             # submit the form
-            json_data = json.dumps(myformdata)
+            #json_data = json.dumps(myformdata)
             print("Form data to submit:")
             print(myformdata)
             myheaders = {'content-type': 'application/x-www-form-urlencoded'}
