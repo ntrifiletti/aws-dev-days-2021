@@ -67,9 +67,13 @@ while i < 180:
 
 i = 1
 p = re.compile('Please enter your administrator login and password')
-while i < 10:
+while i < 30:
     r = requests.get(admin_url)
-    m = p.search(r.text)
+    soup = BeautifulSoup(r.text,'html.parser')
+    print(str(i)+' VVVVVVVVVVVVVVVVVVVVVVVVVVVVV')
+    print(soup.body.text)
+    print(str(i)+' ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+    m = p.search(soup.body.text)
     if m:
         # Yay!
         got_waf = 'yes'
