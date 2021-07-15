@@ -207,7 +207,7 @@ cookie_payload = {
         "cookie-max-age": "1440",
         "http-only": "No",
         "cookie-replay-protection-type": "IP",
-        "tamper-proof-mode": "Signed",
+        "tamper-proof-mode": "None",
         "allow-unrecognized-cookies": "Custom",
         "secure-cookie": "No"
 }
