@@ -5,6 +5,7 @@ from http_basic_auth import generate_header, parse_header
 import os
 import re
 import time
+from bs4 import BeautfiulSoup
 
 waf_ip = os.environ['WAFIP']
 waf_password = os.environ['WAFPASSWORD']
@@ -43,6 +44,23 @@ while i < 180:
         time.sleep(5)
         print("Still at EULA, sleeping 5 seconds...")
         i = i + 1
+        soup = BeautfiulSoup(r.text,'html.parser')
+        inputs = soup.find_all('input')
+        myformdata = {}
+        if inputs:
+            for item in inputs:
+                myname = item.get('name')
+                if myname:
+                    myvalue = item.get('value')
+                    myformdata[myname] = myvalue
+            # submit the form
+            json_data = json.dumps(myformdata)
+            print("Form data to submit:")
+            print(myformdata)
+            myheaders = {'content-type': 'application/x-www-form-urlencoded'}
+            postreq = requests.post(base_url,headers = myheaders, data = myformdata)
+            print(postreq.text)
+            time.sleep(10)
     else:
         # Maybe have admin UI now
         break
