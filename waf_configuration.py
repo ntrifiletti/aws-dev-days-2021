@@ -60,7 +60,12 @@ while i < 180:
             myheaders = {'content-type': 'application/x-www-form-urlencoded'}
             postreq = requests.post(base_url,headers = myheaders, data = myformdata)
             print(postreq.text)
-            time.sleep(10)
+            print("Sleeping 30 seconds then moving on...")
+            time.sleep(30)
+            print("Done sleeping, now attempting to send configuration data to WAF...")
+            break
+        else:
+            print("Unknown issue getting EULA form data...")
     else:
         # Maybe have admin UI now
         break
