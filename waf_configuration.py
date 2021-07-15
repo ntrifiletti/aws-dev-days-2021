@@ -181,3 +181,36 @@ svr_payload = {
 create_svr = requests.post(svr_url, headers = api_headers, data=json.dumps(svr_payload))
 print(create_svr.text)
 
+## Set services to active mode
+svc_basic_security = {
+    "web-firewall-policy": "default",
+    "mode": "Active",
+    "trusted-hosts-group": "",
+    "rate-control-pool": "NONE",
+    "rate-control-status": "Off",
+    "trusted-hosts-action": "Default",
+    "client-ip-addr-header": "",
+    "ignore-case": "Yes",
+    "web-firewall-log-level": "5-Notice"
+}
+
+service_url = "http://"+waf_ip+":8000/restapi/v3.1/services/HTTP-Web/basic-security"
+update_svc = requests.put(service_url, data=json.dumps(svc_basic_security), headers = api_headers)
+print(update_svc.text)
+
+service_url = "http://"+waf_ip+":8000/restapi/v3.1/services/HTTP-API/basic-security"
+update_svc = requests.put(service_url, data=json.dumps(svc_basic_security), headers = api_headers)
+print(update_svc.text)
+
+## Disable cookie security
+cookie_payload = {
+        "cookie-max-age": "1440",
+        "http-only": "No",
+        "cookie-replay-protection-type": "IP",
+        "tamper-proof-mode": "Signed",
+        "allow-unrecognized-cookies": "Custom",
+        "secure-cookie": "No"
+}
+cookie_url = "http://"+waf_ip+":8000/restapi/v3.1/security-policies/default/cookie-security/"
+set_cookies = requests.put(cookie_url,data=json.dumps(cookie_payload), headers = api_headers)
+print(set_cookies.text)
