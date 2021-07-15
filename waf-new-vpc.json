@@ -286,7 +286,7 @@
                   "Key": "Name", 
                   "Value": "Web Server (Badstore/Petstore)"
                 } ],
-              "InstanceType" : "t2.micro",
+              "InstanceType" : "t3.micro",
                   "NetworkInterfaces": [ { 
                      "DeviceIndex": "0", 
                      "AssociatePublicIpAddress": true, 
