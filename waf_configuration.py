@@ -72,7 +72,7 @@ while i < 180:
 
 i = 1
 p = re.compile('Please enter your administrator login and password')
-while i < 30:
+while i < 90:
     r = requests.get(admin_url)
     soup = BeautifulSoup(r.text,'html.parser')
     print(str(i)+' VVVVVVVVVVVVVVVVVVVVVVVVVVVVV')
@@ -86,7 +86,7 @@ while i < 30:
     else:
         # Not yet
         print("Still no admin UI, sleeping 10 seconds...")
-        i = i +1
+        i = i + 1
 
 if got_waf == 'no':
     print("FATAL: Never got the WAF admin UI...")
