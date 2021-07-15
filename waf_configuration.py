@@ -44,7 +44,7 @@ while i < 180:
         time.sleep(5)
         print("Still at EULA, sleeping 5 seconds...")
         i = i + 1
-        soup = BeautfiulSoup(r.text,'html.parser')
+        soup = BeautifulSoup(r.text,'html.parser')
         inputs = soup.find_all('input')
         myformdata = {}
         if inputs:
