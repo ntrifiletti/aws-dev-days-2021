@@ -19,7 +19,7 @@ p = re.compile('Please wait while the system starts up')
 got_waf = 'no'
 i = 1
 while i < 30:
-    r = requests.get(admin_url)
+    r = requests.get(base_url)
     m = p.search(r.text)
     if m:
         # still provisioning
