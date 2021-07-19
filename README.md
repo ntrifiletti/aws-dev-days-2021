@@ -26,7 +26,18 @@ Organisations are adopting infrastructure as code to be more agile to business r
 ### These CFTs _will_ deploy resources that incur cost. Note that using PAYG vs. BYOL will simplify the installation process but has a significantly higher cost. A Barracuda representative or partner can assist with acquiring an evaluation license.
 
 ## Browser Recommendations
-### The tasks in the lab have been tested with Edge, Firefox, and Chrome. However, it is likely that other browsers such as Safari and Opera will work. (Please don't use MS Internet Explorer. Please.)
+### The tasks in the lab have been tested with Edge, Firefox, and Chrome. However, it is likely that other browsers such as Safari and Opera will work. 
+We recommend utilizing 2 browser windows:
+1. Browser window 1 with 2 tabs:
+    * AWS Console
+    * Barracuda WAF UI
+2. Browser window 2 with 1 or more tabs:
+    * Incognito/Private Tab connected to web application
+
+
+
+## Lab Instructions
+### 
 We recommend utilizing 2 browser windows:
 1. Browser window 1 with 2 tabs:
     * AWS Console
