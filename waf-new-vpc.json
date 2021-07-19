@@ -119,7 +119,7 @@
 			"eu-central-1": {			"ImageID": "ami-0dcdd8046df8e35bf"			},
 			"us-east-2": {				"ImageID": "ami-063bad96bd053da6e"			},
 			"us-west-1": {				"ImageID": "ami-0a9b9407fc6bb2a73"			},
-			"us-west-2": {				"ImageID": "ami-07a03990a907dea03"			}
+			"us-west-2": {				"ImageID": "ami-0d2f9462fb0c9f369"			}
 		},
 		"BYOLRegionMap": {
 			"us-east-1": {				"ImageID": "ami-034543d76ef7650a8"			},
